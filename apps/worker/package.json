@@ -9,7 +9,6 @@
     "dev": "tsx watch src/index.ts"
   },
   "dependencies": {
-    "bullmq": "*",
-    "@contract-rag/config": "0.1.0"
+    "bullmq": "*"
   }
 }
