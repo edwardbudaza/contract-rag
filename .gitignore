@@ -1,11 +1,30 @@
+# Dependencies
+
 node_modules/
+
+# Build output
+
 dist/
 build/
+
+# TypeScript build information
+
+*.tsbuildinfo
+
+# Test coverage
+
 coverage/
+
+# Environment variables
+
 .env
 .env.*
 !.env.example
+
+# Logs
+
 *.log
+
+# OS files
+
 .DS_Store
-node_modules
-*.tsbuildinfo
