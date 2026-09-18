@@ -28,8 +28,16 @@ const envSchema = z.object({
 
 export type AppConfig = z.infer<typeof envSchema>;
 
+// Pure function, no side effects — this is what tests import (packages/config has no test
+// of its own yet that calls this directly, but apps/api and the test suite both can without
+// triggering process.exit). Kept separate from `config` below so validation logic is
+// testable in isolation from "what happens when validation fails at boot".
+export function parseEnv(raw: NodeJS.ProcessEnv): ReturnType<typeof envSchema.safeParse> {
+  return envSchema.safeParse(raw);
+}
+
 function loadConfig(): AppConfig {
-  const parsed = envSchema.safeParse(process.env);
+  const parsed = parseEnv(process.env);
 
   if (!parsed.success) {
     // Fail fast and loud at boot — never at request time.
