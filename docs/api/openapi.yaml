@@ -1,0 +1,509 @@
+openapi: 3.0.3
+info:
+  title: Contract Analysis RAG API
+  version: "0.1.0"
+  description: >
+    Phase 0 contract-first API specification. Backs docs/api/api-contracts.md.
+servers:
+  - url: /api/v1
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  token: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  token: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  email: { type: string, format: email }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /contracts:
+    post:
+      operationId: createContract
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string }
+      responses:
+        "201":
+          description: Contract created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contractId: { type: string, format: uuid }
+                  status: { type: string, enum: [UPLOADING] }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    get:
+      operationId: listContracts
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated contract list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContractPage"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /contracts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    get:
+      operationId: getContract
+      responses:
+        "200":
+          description: Contract detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Contract" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      operationId: deleteContract
+      responses:
+        "202":
+          description: Deletion queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contractId: { type: string, format: uuid }
+                  status: { type: string, enum: [DELETED] }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /contracts/{id}/documents:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    post:
+      operationId: createDocumentUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileName, fileType, fileSize]
+              properties:
+                fileName: { type: string }
+                fileType: { type: string }
+                fileSize: { type: integer }
+      responses:
+        "202":
+          description: Upload URL issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  versionId: { type: string, format: uuid }
+                  uploadUrl: { type: string, format: uri }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /contracts/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    get:
+      operationId: getContractStatus
+      responses:
+        "200":
+          description: Contract + version + job status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContractStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /contracts/{id}/analyze:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    post:
+      operationId: triggerAnalysis
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                versionId: { type: string, format: uuid }
+      responses:
+        "202":
+          description: Analysis job enqueued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId: { type: string, format: uuid }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /contracts/{id}/analysis:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    get:
+      operationId: getAnalysis
+      responses:
+        "200":
+          description: Latest structured analysis
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContractAnalysis" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /contracts/{id}/conversations:
+    parameters:
+      - $ref: "#/components/parameters/ContractId"
+    post:
+      operationId: createConversation
+      responses:
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversationId: { type: string, format: uuid }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      operationId: listConversations
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated conversation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        conversationId: { type: string, format: uuid }
+                        startedAt: { type: string, format: date-time }
+                  nextCursor: { type: string, nullable: true }
+
+  /conversations/{id}/messages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Grounded answer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatAnswer" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/UngroundedAnswer" }
+    get:
+      operationId: listMessages
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Paginated message history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Message" }
+                  nextCursor: { type: string, nullable: true }
+
+  /health:
+    get:
+      operationId: getHealth
+      security: []
+      responses:
+        "200": { description: Process is alive }
+
+  /ready:
+    get:
+      operationId: getReadiness
+      security: []
+      responses:
+        "200": { description: "Postgres, Redis/Valkey, and Qdrant are reachable" }
+        "503": { description: A required dependency is unreachable }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ContractId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 100 }
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 7807 Problem Details. See docs/architecture/error-model.md.
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        detail: { type: string }
+        status: { type: integer }
+        requestId: { type: string }
+
+    Contract:
+      type: object
+      properties:
+        contractId: { type: string, format: uuid }
+        title: { type: string }
+        status:
+          type: string
+          enum: [UPLOADING, PROCESSING, ANALYZING, READY, FAILED, DELETED]
+        createdAt: { type: string, format: date-time }
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              versionId: { type: string, format: uuid }
+              status: { type: string, enum: [PENDING, PROCESSING, INDEXED, FAILED] }
+
+    ContractPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Contract" }
+        nextCursor: { type: string, nullable: true }
+
+    ContractStatus:
+      type: object
+      properties:
+        contractId: { type: string, format: uuid }
+        status: { type: string }
+        versions:
+          type: array
+          items:
+            type: object
+            properties:
+              versionId: { type: string, format: uuid }
+              status: { type: string }
+              jobs:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type: { type: string, enum: [EXTRACTION, EMBEDDING, ANALYSIS, CLEANUP] }
+                    status: { type: string, enum: [QUEUED, PROCESSING, COMPLETED, FAILED, DEAD] }
+
+    ContractAnalysis:
+      type: object
+      properties:
+        analysisId: { type: string, format: uuid }
+        versionId: { type: string, format: uuid }
+        model: { type: string }
+        promptVersion: { type: string }
+        result:
+          type: object
+          properties:
+            summary: { type: string }
+            parties: { type: array, items: { type: string } }
+            obligations: { type: array, items: { type: string } }
+            paymentTerms: { type: string }
+            importantDates: { type: array, items: { type: string, format: date } }
+            termination: { type: string }
+            governingLaw: { type: string }
+            riskyClauses:
+              type: array
+              items:
+                type: object
+                properties:
+                  severity: { type: string, enum: [low, medium, high] }
+                  concern: { type: string }
+                  evidence:
+                    type: object
+                    properties:
+                      page: { type: integer }
+                      section: { type: string }
+                      chunkId: { type: string }
+            missingProtections: { type: array, items: { type: string } }
+            evidence: { type: array, items: { type: object } }
+        createdAt: { type: string, format: date-time }
+
+    Message:
+      type: object
+      properties:
+        sender: { type: string, enum: [user, assistant] }
+        content: { type: string }
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              page: { type: integer }
+              section: { type: string }
+              snippet: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ChatAnswer:
+      type: object
+      properties:
+        answer: { type: string }
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              page: { type: integer }
+              section: { type: string }
+              chunkId: { type: string }
+              snippet: { type: string }
+
+  responses:
+    ValidationError:
+      description: Request failed validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Unauthorized:
+      description: Missing or invalid credentials
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Forbidden:
+      description: Authenticated but not the resource owner
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    NotFound:
+      description: Resource does not exist
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    Conflict:
+      description: Resource already exists
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
+    UngroundedAnswer:
+      description: Retrieval found no context to ground an answer in
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Problem" }
