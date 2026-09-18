@@ -1,0 +1,15 @@
+{
+  "name": "@contract-rag/api",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "express": "*",
+    "zod": "*"
+  }
+}
