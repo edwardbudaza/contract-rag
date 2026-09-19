@@ -9,7 +9,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./packages/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Schema is no longer baked in via docker-entrypoint-initdb.d (that was a Phase 0
+    # shortcut). Phase 1 applies packages/database/migrations/*.sql explicitly:
+    #   npm run db:migrate
 
   valkey:
     image: valkey/valkey:7-alpine
@@ -23,7 +30,41 @@ services:
     volumes:
       - qdrant-data:/qdrant/storage
 
-  # api and worker are added once Phase 1 introduces buildable Dockerfiles.
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contract_rag
+      REDIS_URL: redis://valkey:6379
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_started
+      qdrant:
+        condition: service_started
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/contract_rag
+      REDIS_URL: redis://valkey:6379
+      QDRANT_URL: http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_started
+      qdrant:
+        condition: service_started
 
 volumes:
   postgres-data:
