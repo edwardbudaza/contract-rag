@@ -2,6 +2,9 @@
 // Nothing else in the codebase should read process.env directly — import `config` from here.
 // See docs/operations/configuration.md for rationale.
 
+import fs from "node:fs";
+import path from "node:path";
+import dotenv from "dotenv";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -36,7 +39,23 @@ export function parseEnv(raw: NodeJS.ProcessEnv): ReturnType<typeof envSchema.sa
   return envSchema.safeParse(raw);
 }
 
+function loadDotenv(): void {
+  const candidatePaths = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../../../.env"),
+  ];
+
+  for (const envPath of candidatePaths) {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+    }
+  }
+}
+
 function loadConfig(): AppConfig {
+  loadDotenv();
   const parsed = parseEnv(process.env);
 
   if (!parsed.success) {

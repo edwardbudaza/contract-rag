@@ -9,6 +9,7 @@
     "dev": "tsc --build --watch"
   },
   "dependencies": {
+    "dotenv": "^18.0.0",
     "zod": "*"
   }
 }
