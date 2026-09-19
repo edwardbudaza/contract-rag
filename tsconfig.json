@@ -20,7 +20,8 @@
     { "path": "packages/shared" },
     { "path": "packages/queue" },
     { "path": "packages/observability" },
-    { "path": "packages/rag" }
+    { "path": "packages/rag" },
+    { "path": "./tsconfig.jest.json" }
   ],
   "files": []
 }

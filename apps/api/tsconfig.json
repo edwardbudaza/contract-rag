@@ -5,15 +5,14 @@
     "rootDir": "src",
     "composite": true
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../packages/config"
     },
     {
       "path": "../../packages/shared"
-    }
+    },
+    { "path": "../../packages/database" }
   ]
 }

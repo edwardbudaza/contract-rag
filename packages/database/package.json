@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --build",
+    "migrate": "tsx src/bin.ts",
     "dev": "tsc --build --watch"
   },
   "dependencies": {

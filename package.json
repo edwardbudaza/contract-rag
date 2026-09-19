@@ -13,6 +13,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "lint": "eslint . --ext .ts",
+    "db:migrate": "npm run migrate --workspace=packages/database",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "typecheck": "tsc --build --pretty",
@@ -27,6 +28,7 @@
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.1",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -35,12 +37,14 @@
     "prettier": "^3.9.8",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.1",
     "@sentry/node": "^10.75.0",
     "bullmq": "^6.3.7",
+    "dotenv": "^18.0.0",
     "express": "^5.2.1",
     "ioredis": "^6.0.0",
     "langchain": "^1.5.11",
