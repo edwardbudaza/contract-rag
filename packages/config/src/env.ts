@@ -2,6 +2,9 @@
 // Nothing else in the codebase should read process.env directly — import `config` from here.
 // See docs/operations/configuration.md for rationale.
 
+import fs from "node:fs";
+import path from "node:path";
+import dotenv from "dotenv";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -28,8 +31,32 @@ const envSchema = z.object({
 
 export type AppConfig = z.infer<typeof envSchema>;
 
+// Pure function, no side effects — this is what tests import (packages/config has no test
+// of its own yet that calls this directly, but apps/api and the test suite both can without
+// triggering process.exit). Kept separate from `config` below so validation logic is
+// testable in isolation from "what happens when validation fails at boot".
+export function parseEnv(raw: NodeJS.ProcessEnv): ReturnType<typeof envSchema.safeParse> {
+  return envSchema.safeParse(raw);
+}
+
+function loadDotenv(): void {
+  const candidatePaths = [
+    path.resolve(process.cwd(), ".env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../../../.env"),
+  ];
+
+  for (const envPath of candidatePaths) {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath });
+    }
+  }
+}
+
 function loadConfig(): AppConfig {
-  const parsed = envSchema.safeParse(process.env);
+  loadDotenv();
+  const parsed = parseEnv(process.env);
 
   if (!parsed.success) {
     // Fail fast and loud at boot — never at request time.

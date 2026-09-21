@@ -1,1 +1,1 @@
-export { config, type AppConfig } from "./env";
+export { config, parseEnv, type AppConfig } from "./env";
