@@ -9,8 +9,9 @@
     "dev": "tsc --build --watch"
   },
   "dependencies": {
-    "pino": "*",
     "@opentelemetry/api": "*",
-    "@sentry/node": "*"
+    "@sentry/node": "*",
+    "pino": "*",
+    "pino-pretty": "^13.1.3"
   }
 }

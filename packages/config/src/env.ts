@@ -49,7 +49,7 @@ function loadDotenv(): void {
 
   for (const envPath of candidatePaths) {
     if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath });
+      dotenv.config({ path: envPath, quiet: true });
     }
   }
 }
