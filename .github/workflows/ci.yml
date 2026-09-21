@@ -9,6 +9,44 @@ on:
 jobs:
   lint-typecheck-test:
     runs-on: ubuntu-latest
+
+    # A real Postgres for the integration suite (tests/integration/database.test.ts) — same
+    # image docker-compose.yml uses locally. GitHub Actions maps its port straight onto the
+    # runner's localhost, so DATABASE_URL below just points at 127.0.0.1.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: contract_rag_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # packages/config validates ALL required variables eagerly at import time (fail-fast by
+    # design — see docs/operations/configuration.md), including ones no Phase 1 code path
+    # actually calls yet (GEMINI_API_KEY, R2_*, QDRANT_*). CI has to supply every one of them
+    # with a throwaway value or the process exits before a single test runs — this is the
+    # same reason tests/setup.ts exists for local `npm test` runs.
+    env:
+      NODE_ENV: test
+      PORT: "3000"
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/contract_rag_test
+      REDIS_URL: redis://localhost:6379
+      QDRANT_URL: http://localhost:6333
+      QDRANT_API_KEY: ci-placeholder
+      R2_ENDPOINT: https://example.r2.cloudflarestorage.com
+      R2_ACCESS_KEY_ID: ci-placeholder
+      R2_SECRET_ACCESS_KEY: ci-placeholder
+      R2_BUCKET: ci-placeholder
+      GEMINI_API_KEY: ci-placeholder
+      JWT_SECRET: ci-placeholder-secret-at-least-32-characters
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,8 +67,14 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
 
+      - name: Apply database migrations
+        run: npm run db:migrate
+
+      - name: Integration tests
+        run: npm run test:integration
+
       - name: Build
         run: npm run build
 
-  # Integration/E2E jobs are added in Phase 3+ once containerized Postgres/Redis/Qdrant
-  # fixtures exist (tests/integration, tests/e2e).
+  # E2E jobs are added in Phase 3+, once BullMQ/Redis fixtures exist alongside Postgres
+  # (tests/e2e needs a running worker, not just a database).
