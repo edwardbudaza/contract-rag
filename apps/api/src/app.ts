@@ -1,20 +1,30 @@
 // Express application entry point.
-// Phase 0 added the bare health/ready endpoints. Phase 1 wires the production foundation
-// around them: correlation IDs, centralized error handling, and a real Postgres readiness
-// check — everything routes/controllers (Phase 4+) will be built on top of.
+// Phase 0 added the bare health/ready endpoints. Phase 1 wired the production foundation
+// around them: correlation IDs, centralized error handling, a real Postgres readiness check.
+// Phase 2 adds observability: every request is now logged and measured, and errors reach
+// Sentry — everything routes/controllers (Phase 4+) will be built on top of.
 
 import express, { type Request, type Response } from "express";
 import { requestId } from "./middleware/requestId";
+import { requestLogger } from "./middleware/requestLogger";
+import { metricsMiddleware } from "./middleware/metrics";
 import { notFound } from "./middleware/notFound";
 import { errorHandler } from "./middleware/errorHandler";
 import { ping as pingDatabase } from "@contract-rag/database";
+import { logger as loggerModule, metrics } from "@contract-rag/observability";
 
 export function createApp() {
   const app = express();
+  const logger = loggerModule.createLogger("contract-rag-api");
+
   app.use(requestId());
+  app.use(requestLogger(logger));
+  app.use(metricsMiddleware());
   app.use(express.json());
 
   // GET /health — "is the process alive?" — no dependency checks (architecture.md §32).
+  // Excluded from request logging/metrics/tracing (see requestLogger.ts) — a scraper hitting
+  // this every few seconds would otherwise drown out real traffic in the logs.
   app.get("/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok" });
   });
@@ -30,12 +40,20 @@ export function createApp() {
     res.status(200).json({ status: "ready", database: "ok" });
   });
 
+  // GET /metrics — Prometheus scrape endpoint (architecture.md §15). No auth in Phase 2;
+  // in a real deployment this is usually firewalled to the scraper's network, not the
+  // public internet — a Phase 12 hardening concern, not a Phase 2 one.
+  app.get("/metrics", async (_req: Request, res: Response) => {
+    res.setHeader("Content-Type", metrics.registry.contentType);
+    res.send(await metrics.registry.metrics());
+  });
+
   // TODO(Phase 4+): mount /api/v1/auth, /api/v1/contracts, /api/v1/conversations
   // per docs/api/openapi.yaml, each as thin controller → service → repository, using
   // apps/api/src/middleware/validate.ts against packages/shared/src/schemas.ts.
 
   app.use(notFound());
-  app.use(errorHandler());
+  app.use(errorHandler(logger));
 
   return app;
 }

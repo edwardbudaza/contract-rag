@@ -6,6 +6,7 @@ import express from "express";
 import request from "supertest";
 import { z } from "zod";
 import { ConflictError } from "@contract-rag/shared";
+import { logger as loggerModule } from "@contract-rag/observability";
 import { requestId } from "../../../apps/api/src/middleware/requestId";
 import { validate } from "../../../apps/api/src/middleware/validate";
 import { notFound } from "../../../apps/api/src/middleware/notFound";
@@ -13,6 +14,7 @@ import { errorHandler } from "../../../apps/api/src/middleware/errorHandler";
 
 function buildTestApp() {
   const app = express();
+  const logger = loggerModule.createLogger("test");
   app.use(requestId());
   app.use(express.json());
 
@@ -33,7 +35,7 @@ function buildTestApp() {
   });
 
   app.use(notFound());
-  app.use(errorHandler());
+  app.use(errorHandler(logger));
   return app;
 }
 

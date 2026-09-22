@@ -1,0 +1,16 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "composite": false,
+    "declaration": false,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@contract-rag/*": ["../packages/*/src"]
+    },
+    "types": ["jest", "node"]
+  },
+  "include": ["**/*.ts", "../apps/**/*.ts", "../packages/**/*.ts"]
+}
