@@ -35,7 +35,7 @@ export function createLogger(serviceName: string, destination?: NodeJS.WritableS
     // and the only caller that passes one is the test suite, which never runs with
     // NODE_ENV=development.)
     transport:
-      config.NODE_ENV === "development"
+      config.NODE_ENV === "development" && !destination
         ? { target: "pino-pretty", options: { colorize: true, translateTime: "HH:MM:ss" } }
         : undefined,
     timestamp: pino.stdTimeFunctions.isoTime,
