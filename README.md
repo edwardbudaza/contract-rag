@@ -6,7 +6,8 @@ and tested. See `docs/architecture/architecture.md` for the full system design.
 
 ## Status
 
-**Phase 0 — Architecture & Contracts** and **Phase 1 — Production Foundation** are complete.
+**Phase 0 — Architecture & Contracts**, **Phase 1 — Production Foundation**, and
+**Phase 2 — Observability Foundation** are complete.
 
 ### Phase 0 — Architecture & Contracts
 
@@ -63,6 +64,18 @@ contract-rag/
 └── .github/workflows/ci.yml   # lint, typecheck, unit + integration tests, build
 ```
 
+### Phase 2 — Observability Foundation
+
+| Deliverable | What it is | Location |
+|---|---|---|
+| Structured logging | Pino factory with sensitive-field redaction (password/token/authorization/apiKey/secret) | `packages/observability/src/logger/` |
+| Request logging | `request.received` / `request.completed` events, correlated by `requestId` | `apps/api/src/middleware/requestLogger.ts` |
+| Metrics | Prometheus registry, HTTP counter + duration histogram, `GET /metrics` | `packages/observability/src/metrics/`, `apps/api/src/middleware/metrics.ts` |
+| Sentry | Optional (no-op without `SENTRY_DSN`), 5xx-only reporting, event scrubbing | `packages/observability/src/sentry/` |
+| OpenTelemetry | Auto-instrumented tracing (http/express/pg), console exporter fallback | `packages/observability/src/tracing/`, `apps/api/src/instrumentation.ts` |
+| Graceful shutdown | `SIGTERM`/`SIGINT` drain connections, close the DB pool, flush spans | `apps/api/src/index.ts` |
+| Test-type-safety | `tests/tsconfig.json` — `npm run typecheck` now covers tests too, not just app/package source | `tests/tsconfig.json`, `jest.config.js` |
+
 ## Local Development
 
 ```bash
@@ -76,7 +89,7 @@ npm run lint
 npm run test:unit
 npm run test:integration    # needs the postgres container above
 
-npm run dev:api             # http://localhost:3000/health, /ready
+npm run dev:api             # http://localhost:3000/health, /ready, /metrics
 npm run dev:worker
 ```
 

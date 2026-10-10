@@ -27,6 +27,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
 
   SENTRY_DSN: z.string().url().optional(),
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.string().url().optional(),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
@@ -49,7 +50,7 @@ function loadDotenv(): void {
 
   for (const envPath of candidatePaths) {
     if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath });
+      dotenv.config({ path: envPath, quiet: true });
     }
   }
 }

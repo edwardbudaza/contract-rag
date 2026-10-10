@@ -5,7 +5,7 @@
 // (tests/integration/) actually connect with — override it via a real env var if your local
 // Postgres isn't on the default docker-compose port/credentials.
 
-process.env.NODE_ENV = process.env.NODE_ENV ?? "test";
+process.env.NODE_ENV = "test";
 process.env.PORT = process.env.PORT ?? "3000";
 process.env.DATABASE_URL =
   process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/contract_rag_test";

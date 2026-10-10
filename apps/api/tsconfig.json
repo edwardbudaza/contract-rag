@@ -13,6 +13,11 @@
     {
       "path": "../../packages/shared"
     },
-    { "path": "../../packages/database" }
+    {
+      "path": "../../packages/database"
+    },
+    {
+      "path": "../../packages/observability"
+    }
   ]
 }
